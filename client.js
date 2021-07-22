@@ -1,30 +1,56 @@
 'use strict';
 
-var Peer = require('simple-peer');
-var wrtc = require('wrtc');
-var exec = require('child_process').exec;
+const Peer = require('simple-peer');
+const wrtc = require('wrtc');
+const exec = require('child_process').exec;
 var io = null, clients = null;
 //var ros2node = require('./ros2node');
 var socket = null;
 var d = new Date();
-var now = d.toLocaleTimeString()
-var status = require('./computerStatus')
-var cam2node = require('./cam2node');
-var pc = {
+const now = d.toLocaleTimeString()
+const status = require('./computerStatus')
+const cam2node = require('./node2node');
+//var gnss2node = require('./gnss2node')
+let pc = {
   cpuUsage: 0,
   ramUsage: 0,
   battery: 0,
   temp: 0,
 
 }
-var database64 = {
+let database64 = {
   img: 0
+}
+const gnssDataArr = [] 
+let gnssData = {
+  lat : 0,
+  lon : 0,
+  alt : 0,
+  dir : 0,
+  velo : 0,
+  x: 0,
+  y : 0,
+  dis : 0
 }
 const callrosnode = ()=>{
   cam2node.base64(database64)
+ 
+}
+const gnssrosnode = ()=>{
+  gnssData = cam2node.parseData()
+  if(gnssDataArr.length < 100){
+    gnssDataArr.push(gnssData)
+  }else{
+    gnssDataArr.shift();
+    gnssDataArr.push(gnssData)
+  }
+  console.log(gnssDataArr)
+
+ 
 }
 setInterval(()=>{status.status(pc)}, 10000)
-setInterval(callrosnode,150)
+setInterval(callrosnode,500)
+setInterval(gnssrosnode,500)
 
 
 var pcConfig = {
