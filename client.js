@@ -9,8 +9,15 @@ var socket = null;
 var d = new Date();
 const now = d.toLocaleTimeString()
 const status = require('./computerStatus')
-const cam2node = require('./node2node');
-//var gnss2node = require('./gnss2node')
+
+
+const rosNodejs = require('./node2node');
+
+
+var exportData = rosNodejs.exportData
+var changeCam = rosNodejs.changeCam
+
+// CAM Default is 1   0 is close the camera 
 let pc = {
   cpuUsage: 0,
   ramUsage: 0,
@@ -21,36 +28,39 @@ let pc = {
 let database64 = {
   img: 0
 }
-const gnssDataArr = [] 
+const gazeboPositionArr = [] 
 let gnssData = {
   lat : 0,
   lon : 0,
-  alt : 0,
-  dir : 0,
-  velo : 0,
-  x: 0,
-  y : 0,
-  dis : 0
 }
+let gnssDataArr = []
 const callrosnode = ()=>{
-  cam2node.base64(database64)
+  //console.log(exportData[0])
+  exportData[0]
  
 }
-const gnssrosnode = ()=>{
-  gnssData = cam2node.parseData()
-  if(gnssDataArr.length < 100){
-    gnssDataArr.push(gnssData)
-  }else{
-    gnssDataArr.shift();
-    gnssDataArr.push(gnssData)
+const gazeboPose = ()=>{
+  gnssData = exportData[1]
+  console.log(exportData[1])
+  if(gnssData.length == 0){
+    console.log('No data')
+  }else {
+    if(gnssDataArr.length < 100){
+      gnssDataArr.push(gnssData)
+    }else{
+      gnssDataArr.shift();
+      gnssDataArr.push(gnssData)
+    }
   }
-  console.log(gnssDataArr)
 
  
+ 
 }
-setInterval(()=>{status.status(pc)}, 10000)
-setInterval(callrosnode,500)
-setInterval(gnssrosnode,500)
+setInterval(()=>{status.status(pc)}, 500)
+// RUN NODE
+
+setInterval(callrosnode,50)
+setInterval(gazeboPose,200)
 
 
 var pcConfig = {
@@ -150,34 +160,39 @@ class cClient{
           console.warn('cannot parse data');
           return;
         }
-        console.log('data : '+JSON.stringify(data));
+        console.log('data == : '+JSON.stringify(data));
         if( data.event=='ready' ){
           th.send_peer({event:'ready'});
         }
-         else if( data.event=='get_path_list' ){
-    /*      ros2node.get_path_list()
-          .then((res)=>{
-            console.log(res);
-            th.send_peer({event:'get_path_list', paths: res.name});
-          })
-          .catch((e)=>{
-            console.error('get_path_list', e);
-            th.send_peer({event:'get_path_list', err: e});
-          }); */
-
-          console.log('get_path_list 555')
-          th.send_peer({event: 'get_path_list', paths:'something'})
+        else if(data.event == 'get_location'){
+         
+          th.send_peer({event: 'get_location', data:gnssDataArr})
         }
-        else if(data.event == 'stream'){
-          //console.log('send stream data already',)
-          th.send_peer({event : 'stream', base64:database64.img } )
+       else if(data.event == 'stream'){
+         
+          th.send_peer({event : 'stream', base64:exportData[0] } )
         }
+        else if (data.event === 'camera_2'){
+          changeCam(2)
+         
+        }
+        else if (data.event === 'camera_1'){
+          changeCam(1)
         
-        else if(data.event='get_pc_status'){
-          th.send_peer({event: 'get_pc_status', status:pc})
         }
-
-        else if(data.event=='get_path' ){
+        else if (data.event === 'camera_3'){
+          changeCam(3)
+        
+        }
+        else if (data.event === 'camera_0'){
+          changeCam(0)
+        
+        }
+        else if(data.event == 'get_pc_status'){
+         console.log('send pc status')
+         th.send_peer({event: 'get_pc_status', status:pc})
+       }
+        else if(data.event == 'get_path' ){
           console.log('get_path')
           var d = new Date();
           var now = d.toLocaleTimeString()
@@ -213,7 +228,7 @@ class cClient{
 function init(_clients, _socket){
   clients = _clients;
   socket = _socket;
-  return console.log('init 5555');
+  return console.log('init');
   //ros2node.init();
 }
 
@@ -260,3 +275,6 @@ function get_client_from_socket_id(socket_id){
   return null;
 
 }
+
+
+

@@ -1,5 +1,5 @@
 'use strict';
-
+const fs = require('fs')
 const PATH_PROFILE_PREFIX = [54, 92]
   , PATH_PROFILE_SUFFIX = [18, 251]
   , MAX_PATH_NAME = 64
@@ -46,4 +46,15 @@ function execute(raw_data){
 }
 
 
+var waypoints ;
+fs.readFile('./path.path' , (err, data) => {
+  if (err) {
+    console.error(err)
+    return
+  }
+  
+  waypoints = execute(data)
+  console.log(waypoints.length)
 
+
+})
