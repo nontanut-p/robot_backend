@@ -1,21 +1,16 @@
 'use strict';
-
 const Peer = require('simple-peer');
 const wrtc = require('wrtc');
 const exec = require('child_process').exec;
 var io = null, clients = null;
-//var ros2node = require('./ros2node');
 var socket = null;
 var d = new Date();
 const now = d.toLocaleTimeString()
 const status = require('./computerStatus')
-
-
 const rosNodejs = require('./node2node');
-
-
-var exportData = rosNodejs.exportData
-var changeCam = rosNodejs.changeCam
+// const gnssData = require('./gnssNode')
+var ObjectExportData = rosNodejs.ObjectExportData
+var rosNodeCommand = rosNodejs.rosNodeCommand
 
 // CAM Default is 1   0 is close the camera 
 let pc = {
@@ -23,27 +18,29 @@ let pc = {
   ramUsage: 0,
   battery: 0,
   temp: 0,
-
 }
+
 let database64 = {
   img: 0
 }
+
 const gazeboPositionArr = [] 
 let gnssData = {
   lat : 0,
   lon : 0,
 }
+
 let gnssDataArr = []
 const callrosnode = ()=>{
   //console.log(exportData[0])
-  exportData[0]
+  ObjectExportData
  
 }
 const gazeboPose = ()=>{
-  gnssData = exportData[1]
-  console.log(exportData[1])
+  gnssData = ObjectExportData.posinalLL
+  // console.log(exportData[1], 'only data 1')
   if(gnssData.length == 0){
-    console.log('No data')
+    // console.log('No data')
   }else {
     if(gnssDataArr.length < 100){
       gnssDataArr.push(gnssData)
@@ -52,20 +49,14 @@ const gazeboPose = ()=>{
       gnssDataArr.push(gnssData)
     }
   }
-
- 
- 
 }
 setInterval(()=>{status.status(pc)}, 500)
-// RUN NODE
-
 setInterval(callrosnode,50)
 setInterval(gazeboPose,200)
 
-
 var pcConfig = {
   'iceServers': [{
-    'urls': 'stun:stun.l.google.com:19302'
+    'urls': 'stun:stun.l,.google.com:19302'
     },
   ]
 };
@@ -119,7 +110,7 @@ class cClient{
     }
   }
 
-  createPeerConnection(cnt=0){
+   createPeerConnection(cnt=0){
     console.log('createPeerConnection');
     var th = this;
     console.log('this',th)
@@ -160,43 +151,57 @@ class cClient{
           console.warn('cannot parse data');
           return;
         }
-        console.log('data == : '+JSON.stringify(data));
+        // console.log('data == : '+JSON.stringify(data));
         if( data.event=='ready' ){
           th.send_peer({event:'ready'});
         }
         else if(data.event == 'get_location'){
-         
           th.send_peer({event: 'get_location', data:gnssDataArr})
         }
        else if(data.event == 'stream'){
          
-          th.send_peer({event : 'stream', base64:exportData[0] } )
+          th.send_peer({event : 'stream', base64:ObjectExportData.base64Img } )
         }
         else if (data.event === 'camera_2'){
-          changeCam(2)
+          data = {"cam" : 2}
+          rosNodeCommand(data)
          
         }
         else if (data.event === 'camera_1'){
-          changeCam(1)
-        
+          data = {"cam" : 1}
+          rosNodeCommand(data)
         }
         else if (data.event === 'camera_3'){
-          changeCam(3)
-        
+          data = {"cam" : 3}
+          rosNodeCommand(data)
         }
         else if (data.event === 'camera_0'){
-          changeCam(0)
-        
+          data = {"cam" : 0}
+          rosNodeCommand(data)
         }
         else if(data.event == 'get_pc_status'){
-         console.log('send pc status')
+        //  console.log('send pc status')
          th.send_peer({event: 'get_pc_status', status:pc})
        }
         else if(data.event == 'get_path' ){
-          console.log('get_path')
-          var d = new Date();
-          var now = d.toLocaleTimeString()
-          console.log(now)
+          // console.log('get_path')
+          data = {"get_path" : true}
+          rosNodeCommand(data)
+          try{
+            console.log(Object.values(ObjectExportData.PathList), 'path list 191')
+          }catch(e){
+            console.log('no value')
+          }
+          if(ObjectExportData.PathList){
+            console.log('here ')
+            
+            data = {"get_path" : false}
+            th.send_peer({event: 'path_list', path_list:Object.values(ObjectExportData.PathList)})
+            ObjectExportData.PathList = undefined
+            console.log(ObjectExportData.PathList, '201 test')
+            rosNodeCommand(data)
+          }
+          
           /* ros2node.get_path(data.name)
           .then((waypoints)=>{
             th.send_peer({event:'get_path', waypoints: waypoints});

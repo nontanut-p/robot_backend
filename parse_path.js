@@ -1,6 +1,6 @@
 'use strict';
 const fs = require('fs')
-const PATH_PROFILE_PREFIX = [54, 92]
+const PATH_PROFILE_PREFIX = [1, 0]
   , PATH_PROFILE_SUFFIX = [18, 251]
   , MAX_PATH_NAME = 64
   , PROFILE_SIZE = PATH_PROFILE_PREFIX.length
@@ -26,7 +26,7 @@ function execute(raw_data){
   }
   for(var i=0;i<PATH_PROFILE_PREFIX.length;i++){
     if( data[data_len + i]!=PATH_PROFILE_PREFIX[i] ){
-      throw 'Invalid path profile prefix';
+      // throw 'Invalid path profile prefix';
     }
   }
   for(var i=0;i<PATH_PROFILE_SUFFIX.length;i++){
@@ -40,21 +40,22 @@ function execute(raw_data){
   var float_data = new Float64Array(data.slice(0, data_len).buffer)
     , waypoints = [];
   for(var i=0;i<float_data.length;i+=7){
-    waypoints.push( float_data[i+1], float_data[i+2], 0.0 );  // y
+    waypoints.push( float_data[i+1], float_data[i+2]);  // y
   }
   return waypoints;
 }
 
 
-var waypoints ;
-fs.readFile('./path.path' , (err, data) => {
-  if (err) {
-    console.error(err)
-    return
-  }
+// var waypoints ;
+// fs.readFile('/home/pat/agribot_ws/data/path/path_longrun-210628-033310_opt.path' , (err, data) => {
+//   if (err) {
+//     console.error(err)
+//     return
+//   }
   
-  waypoints = execute(data)
-  console.log(waypoints.length)
+//   waypoints = execute(data)
+//   console.log(waypoints.length)
+//   console.log(waypoints)
 
 
-})
+// })

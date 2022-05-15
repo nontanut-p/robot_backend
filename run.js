@@ -1,7 +1,7 @@
 'use strict';
 
 const APIKEY = 'tuw5es5dc5w1';
-const URL = 'https://weather.mtec.or.th';
+const URL = 'https://agv.mtec.or.th';
 //const URL = 'http://localhost:8080';
 var io = require('socket.io-client');
 var Client = require('./client');
@@ -23,7 +23,6 @@ if (require.main === module) {
   {
     socket.on('connect', function(){
       console.log('socket connected');
-
       // login
       socket.on('request_login', function(){
         console.log('request_login');
