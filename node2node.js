@@ -11,11 +11,15 @@ var positionLL = []
 var path_list
 let listOfCam = ['','/agribot/camera/rear/image_raw' , '/agribot/camera/weed1/image_raw','/agribot/camera/rs_front/color/image_raw']
 let dumpObj = {}
-var objectData = {"cam" : 1 , "get_path" : false , "path_list" : undefined }
+var objectData = {"cam" : 1 , "get_path" : false , "path_list" : undefined , 'path_name' : undefined , 'rosout': []}
 const rosNodeCommand = (objData) =>{
   // dumpObj[Object.keys(objData)] = Object.values(objData)[0]
   // console.log(dumpObj) = Object.values(objData)[0] 
   objectData[Object.keys(objData)] = Object.values(objData)[0]
+  if(objData.path_name){
+    console.log(objData.path_name , 'true line 20 node2nodejs' )
+  }
+  // console.log(objData.path_name)
   // objectData = {...objectData }
   // console.log('object', objectData)
 }
@@ -25,7 +29,7 @@ lon_0 =  100.60713766385788
 earth_radius = 6356752.3142    
 var cameraTopic ='/agribot/camera/rs_front/color/image_raw'
 exportData = [base64Img, positionLL]
-var ObjectExportData = {"base64Img" :base64Img , "posinalLL" : positionLL , "PathList" : path_list}
+var ObjectExportData = {"base64Img" :base64Img , "posinalLL" : positionLL , "PathList" : path_list , "state_follow" : false , 'rosout': ""}
 const changeCam = (cam)=>{
   // console.log('Camera is changing ....  from ', camera_selector , ' to ' , cam)
   camera_selector = cam
@@ -167,13 +171,29 @@ rclnodejs
     }
   
 );
+let rosOut = node.createSubscription(
+  'rcl_interfaces/msg/Log', // msg type
+  '/rosout', // topic name agribot/camera/rear/image_raw 
+  (state) => {
+   let message = " Name : " +state.name +" Msg " + state.msg + " Func " + state.function
+  //  console.log(message)
+   if(ObjectExportData.rosout !== message){
+    ObjectExportData.rosout = message
+    console.log(ObjectExportData.rosout , 'true')
+   }
+   
+  }
+    
+);
 var waypoints ;
 const getPathList=() =>{
+  
   const client = node.createClient('agribot_interfaces/srv/GetPathList', 'agribot/path/get_path_list');
-  //console.log(`Sending: ${typeof request}`, request);
-
+  console.log(`Sending: ${typeof request}`, request);
   client.sendRequest(request, (response) => {
+    console.log('path list response ',response.result)
     try{
+   
       filePath = response.file_path
       path_Name = response.name
       var arrayLength = path_Name.length;
@@ -182,36 +202,63 @@ const getPathList=() =>{
           pathN = path_Name[i].toString()
           temp_obj[pathN] = filePath[i]
       }
+      console.log(temp_obj , 'temp_obj')
       ObjectExportData.PathList = temp_obj
+      // console.log(temp_obj)
       // console.log("----------------------------------------------------")
       // console.log(temp_obj)
       // console.log("----------------------------------------------------")
-       //console.log(`Result:`, filePath[0] , 'Path Name : ', path_Name[0]);
-      //  await fs.readFile(filePath[0] , (err, data) => {
-      //   if (err) {
-      //     console.error(err)
-      //     return
-      //   }
-      //   waypoints = execute(data)
-      //   //console.log(waypoints.length)
-      //   //console.log(waypoints)
+      // console.log(`Result:`, filePath[0] , 'Path Name : ', path_Name[0]);
+       fs.readFile(filePath[0] , (err, data) => {
+        if (err) {
+          console.error(err)
+          return
+        }
+        waypoints = execute(data)
+        objectData.get_path = false
+        //console.log(waypoints.length)
+        //console.log(waypoints)
 
-      // })
+      })
     }catch{
-        console.log('error')
+        console.log('error 214 node2node')
     }
   })
 
 }
+const startFollow=(request) =>{
+  const client = node.createClient('agribot_interfaces/srv/StartFollowPath', 'agribot/path/start_follow');
+  console.log(`Sending: ${typeof request}`, request);
+  client.sendRequest(request, (response) => {
   
+    try{
+      console.log(response.result)
+
+    }catch(e){
+      console.log(e)
+    }
+  })
+}
+  
+  
+
 // node beat 
 setInterval(()=>{
   // check if get path list true 
+  if(objectData.path_name){
+    console.log('something added!!');
+   // send ros here and wait for response if response == 0 is ok 0 fail 
+   // 
+    console.log(objectData.path_name)
+    request = {'name' : objectData.path_name}
+    startFollow(request)
+    objectData.path_name = undefined;
+  }
   if(objectData.get_path == true){
     getPathList() 
+    
    } 
-
-  },250) 
+  },200) 
     rclnodejs.spin(node);
   })
   .catch((e) => {

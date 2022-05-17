@@ -11,7 +11,7 @@ const rosNodejs = require('./node2node');
 // const gnssData = require('./gnssNode')
 var ObjectExportData = rosNodejs.ObjectExportData
 var rosNodeCommand = rosNodejs.rosNodeCommand
-
+var prev_message = ""
 // CAM Default is 1   0 is close the camera 
 let pc = {
   cpuUsage: 0,
@@ -179,27 +179,51 @@ class cClient{
           data = {"cam" : 0}
           rosNodeCommand(data)
         }
+        else if (data.event === 'get_rosout'){
+
+          if(prev_message !== ObjectExportData.rosout ){
+            th.send_peer({event: 'get_rosout', message:ObjectExportData.rosout})
+            console.log('get ros out all the time 183', ObjectExportData.rosout)
+            prev_message = ObjectExportData.rosout
+          }
+        
+          
+          //
+        }
+        else if(data.event == 'start_follow'){
+          //  console.log('send pc status')
+           console.log(data.path , 'print path 184 client.js')
+
+           data = {"path_name" : data.path  }
+           rosNodeCommand(data)
+     
+          // ObjectDataExport.follow_mode.state_follow = false
+          //  if(ObjectExportData.PathList){
+          //   console.log('here ')
+            
+          //   data = {"get_path" : false}
+          //   th.send_peer({event: 'path_list', path_list:Object.values(ObjectExportData.PathList)})
+          //   ObjectExportData.PathList = undefined
+          //   console.log(ObjectExportData.PathList, '201 test')
+          //   rosNodeCommand(data)
+          // }
+         }
         else if(data.event == 'get_pc_status'){
         //  console.log('send pc status')
-         th.send_peer({event: 'get_pc_status', status:pc})
+         th.send_peer({event: 'get_pc_status', status:pc })
        }
         else if(data.event == 'get_path' ){
           // console.log('get_path')
           data = {"get_path" : true}
           rosNodeCommand(data)
-          try{
-            console.log(Object.values(ObjectExportData.PathList), 'path list 191')
-          }catch(e){
-            console.log('no value')
-          }
+
           if(ObjectExportData.PathList){
-            console.log('here ')
             
-            data = {"get_path" : false}
-            th.send_peer({event: 'path_list', path_list:Object.values(ObjectExportData.PathList)})
+            
+            th.send_peer({event: 'path_list', path_list:(ObjectExportData.PathList)})
             ObjectExportData.PathList = undefined
             console.log(ObjectExportData.PathList, '201 test')
-            rosNodeCommand(data)
+            
           }
           
           /* ros2node.get_path(data.name)
