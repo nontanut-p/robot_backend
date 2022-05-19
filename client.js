@@ -11,7 +11,9 @@ const rosNodejs = require('./node2node');
 // const gnssData = require('./gnssNode')
 var ObjectExportData = rosNodejs.ObjectExportData
 var rosNodeCommand = rosNodejs.rosNodeCommand
-var prev_message = ""
+var th 
+var peer
+var prev_message = []
 // CAM Default is 1   0 is close the camera 
 let pc = {
   cpuUsage: 0,
@@ -61,19 +63,7 @@ var pcConfig = {
   ]
 };
 
-module.exports = {
-  init: init,
-  remove_client: remove_client,
-  get_client_from_socket_id: get_client_from_socket_id,
-  set_turn_server: (turn)=>{
-    pcConfig.iceServers.push( turn );
-  },
-  add_client: (socket_id, auth_type)=>{
-    var client = new cClient(socket_id, auth_type);
-    clients.push(client);
-    return client;
-  }
-};
+
 
 
 class cClient{
@@ -112,13 +102,13 @@ class cClient{
 
    createPeerConnection(cnt=0){
     console.log('createPeerConnection');
-    var th = this;
+    th= this;
     console.log('this',th)
     if( cnt > 20 ){
       return Promise.reject('createPeerConnection : wait too long');
     }
     return new Promise((resolve,reject)=>{
-      var peer = this.peer = new Peer({
+        peer = this.peer = new Peer({
         initiator: true,
         config: pcConfig,
         wrtc: wrtc
@@ -151,14 +141,19 @@ class cClient{
           console.warn('cannot parse data');
           return;
         }
-        // console.log('data == : '+JSON.stringify(data));
+        // if(prev_message.length !== ObjectExportData.rosout.length ){
+        //   th.send_peer({event: 'rosout', message:ObjectExportData.rosout})
+        //   prev_message = ObjectExportData.rosout
+        //   console.log('send rosout')
+        // }
+        // console.log('data == : '+JSON.strirosNodeCommand(data)ngify(data));
         if( data.event=='ready' ){
           th.send_peer({event:'ready'});
         }
         else if(data.event == 'get_location'){
           th.send_peer({event: 'get_location', data:gnssDataArr})
         }
-       else if(data.event == 'stream'){
+        else if(data.event == 'stream'){
          
           th.send_peer({event : 'stream', base64:ObjectExportData.base64Img } )
         }
@@ -180,21 +175,13 @@ class cClient{
           rosNodeCommand(data)
         }
         else if (data.event === 'get_rosout'){
+          th.send_peer({event: 'get_rosout', message:ObjectExportData.rosout})
 
-          if(prev_message !== ObjectExportData.rosout ){
-            th.send_peer({event: 'get_rosout', message:ObjectExportData.rosout})
-            console.log('get ros out all the time 183', ObjectExportData.rosout)
-            prev_message = ObjectExportData.rosout
-          }
-        
-          
-          //
         }
         else if(data.event == 'start_follow'){
           //  console.log('send pc status')
-           console.log(data.path , 'print path 184 client.js')
-
-           data = {"path_name" : data.path  }
+           console.log(data.path_name , 'print path 184 client.js')
+           data = {"path_name" : data.path_name }
            rosNodeCommand(data)
      
           // ObjectDataExport.follow_mode.state_follow = false
@@ -208,18 +195,33 @@ class cClient{
           //   rosNodeCommand(data)
           // }
          }
+         else if(data.event == 'stop_follow'){
+           data = {"stop_follow" : true}
+           console.log('stop')
+           rosNodeCommand(data)
+         }
+         else if(data.event == 'start_record'){
+          data = {"start_record" : true }
+          console.log("start record !!! ")
+          rosNodeCommand(data)
+          
+        }
+
+        else if(data.event == 'stop_record'){
+          data = {"stop_record" : true }
+          rosNodeCommand(data)
+          
+        }
         else if(data.event == 'get_pc_status'){
         //  console.log('send pc status')
          th.send_peer({event: 'get_pc_status', status:pc })
-       }
+        }
         else if(data.event == 'get_path' ){
           // console.log('get_path')
           data = {"get_path" : true}
           rosNodeCommand(data)
 
           if(ObjectExportData.PathList){
-            
-            
             th.send_peer({event: 'path_list', path_list:(ObjectExportData.PathList)})
             ObjectExportData.PathList = undefined
             console.log(ObjectExportData.PathList, '201 test')
@@ -306,4 +308,25 @@ function get_client_from_socket_id(socket_id){
 }
 
 
+
+module.exports = {
+  init: init,
+  remove_client: remove_client,
+  get_client_from_socket_id: get_client_from_socket_id,
+  set_turn_server: (turn)=>{
+    pcConfig.iceServers.push( turn );
+  },
+  add_client: (socket_id, auth_type)=>{
+    var client = new cClient(socket_id, auth_type);
+    clients.push(client);
+    return client;
+  },
+  send_data : (event, data)=>{
+    try{
+      th.send_peer({event:'telling me', data:'something'})
+    }catch(e){
+      console.log('e')
+    }
+  }
+};
 

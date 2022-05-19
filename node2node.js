@@ -1,9 +1,11 @@
+'use strict';
 const rclnodejs = require('rclnodejs');
 var fs = require('fs');  // for read or write data
 var atob = require('atob')
 const sharp = require('sharp');
 const { count } = require('console');
 const {execute} = require('./parse_path')
+var Client = require('./client');
 var camera_selector = 1
 console.log(camera_selector)
 var base64Img
@@ -11,11 +13,12 @@ var positionLL = []
 var path_list
 let listOfCam = ['','/agribot/camera/rear/image_raw' , '/agribot/camera/weed1/image_raw','/agribot/camera/rs_front/color/image_raw']
 let dumpObj = {}
-var objectData = {"cam" : 1 , "get_path" : false , "path_list" : undefined , 'path_name' : undefined , 'rosout': []}
+var objectData = {"cam" : 1 , "get_path" : false , "path_list" : undefined , 'path_name' : undefined , 'rosout': [], 'stop_follow' : false , 'start_record' : false , 'stop_record' : false}
 const rosNodeCommand = (objData) =>{
   // dumpObj[Object.keys(objData)] = Object.values(objData)[0]
   // console.log(dumpObj) = Object.values(objData)[0] 
   objectData[Object.keys(objData)] = Object.values(objData)[0]
+  
   if(objData.path_name){
     console.log(objData.path_name , 'true line 20 node2nodejs' )
   }
@@ -24,12 +27,12 @@ const rosNodeCommand = (objData) =>{
   // console.log('object', objectData)
 }
 /// Initial value ///
-lat_0 = 14.08214719610437
-lon_0 =  100.60713766385788
-earth_radius = 6356752.3142    
+let lat_0 = 14.08214719610437
+let lon_0 =  100.60713766385788
+let earth_radius = 6356752.3142    
 var cameraTopic ='/agribot/camera/rs_front/color/image_raw'
-exportData = [base64Img, positionLL]
-var ObjectExportData = {"base64Img" :base64Img , "posinalLL" : positionLL , "PathList" : path_list , "state_follow" : false , 'rosout': ""}
+var exportData = [base64Img, positionLL]
+var ObjectExportData = {"base64Img" :base64Img , "posinalLL" : positionLL , "PathList" : path_list , "state_follow" : false , 'rosout': [], 'start_record' : false, 'stop_record': false}
 const changeCam = (cam)=>{
   // console.log('Camera is changing ....  from ', camera_selector , ' to ' , cam)
   camera_selector = cam
@@ -117,7 +120,13 @@ rclnodejs
       '/agribot/camera/rear/image_raw',// topic name agribot/camera/rear/image_raw 
       //'/image',
       async (msg) => { 
-       
+         try{
+          // console.log(Client.peer.send_peer('test'))
+          // Client.send_data()
+         }catch(e){
+           console.log('error')
+         }
+      
         if(objectData.cam == 1){
           //console.log('test',msg)
           image_processing(msg)
@@ -175,11 +184,11 @@ let rosOut = node.createSubscription(
   'rcl_interfaces/msg/Log', // msg type
   '/rosout', // topic name agribot/camera/rear/image_raw 
   (state) => {
-   let message = " Name : " +state.name +" Msg " + state.msg + " Func " + state.function
+   let message = " Name : " +state.name +" Msg " + state.msg + " Level " + state.level
   //  console.log(message)
    if(ObjectExportData.rosout !== message){
-    ObjectExportData.rosout = message
-    console.log(ObjectExportData.rosout , 'true')
+    ObjectExportData.rosout.push(message) 
+    
    }
    
   }
@@ -193,13 +202,12 @@ const getPathList=() =>{
   client.sendRequest(request, (response) => {
     console.log('path list response ',response.result)
     try{
-   
-      filePath = response.file_path
-      path_Name = response.name
-      var arrayLength = path_Name.length;
+      let filePath = response.file_path
+      let path_Name = response.name
+      let arrayLength = path_Name.length;
       let temp_obj = {}
       for (var i = 0; i < arrayLength; i++) {
-          pathN = path_Name[i].toString()
+          let pathN = path_Name[i].toString()
           temp_obj[pathN] = filePath[i]
       }
       console.log(temp_obj , 'temp_obj')
@@ -209,19 +217,19 @@ const getPathList=() =>{
       // console.log(temp_obj)
       // console.log("----------------------------------------------------")
       // console.log(`Result:`, filePath[0] , 'Path Name : ', path_Name[0]);
-       fs.readFile(filePath[0] , (err, data) => {
-        if (err) {
-          console.error(err)
-          return
-        }
-        waypoints = execute(data)
-        objectData.get_path = false
+      //  fs.readFile(filePath[0] , (err, data) => {
+      //   if (err) {
+      //     console.error(err)
+      //     return
+      //   }
+      //   waypoints = execute(data)
+        // objectData.get_path = false
         //console.log(waypoints.length)
         //console.log(waypoints)
 
-      })
-    }catch{
-        console.log('error 214 node2node')
+      // })
+    }catch(e){
+      console.log(e)
     }
   })
 
@@ -239,25 +247,88 @@ const startFollow=(request) =>{
     }
   })
 }
-  
-  
+const stopFollow=() =>{
+
+  //ros2 service call /agribot/path/stop_follow agribot_interfaces/srv/StopFollowPath
+  const client = node.createClient('agribot_interfaces/srv/StopFollowPath', 'agribot/path/stop_follow');
+  let request 
+  //console.log(`Sending: ${typeof request}`, request);
+  client.sendRequest(request, (response) => {
+    try{
+      console.log(response.result, 'stop')
+    }catch(e){
+      console.log(e)
+    }
+  })
+}
+
+const startRecord = (request)=>{
+  // ros2 service call /agribot/path/start_record agribot_interfaces/srv/StartRecordPath "{name: 'path_name_here'}"
+  const client = node.createClient('agribot_interfaces/srv/StartRecordPath' , 'agribot/path/start_record')
+  console.log('start record !!' , request)
+  client.sendRequest(request, (response)=>{
+    try{
+      console.log(response.result, 'start record ')
+    }catch(e){
+      console.log(e)
+      console.log('cant record')
+    }
+
+
+  })
+
+}
+ 
+const stopRecord = ()=>{
+  // ros2 service call /agribot/path/start_record agribot_interfaces/srv/StartRecordPath "{name: 'path_name_here'}"
+  const client = node.createClient('agribot_interfaces/srv/StopRecordPath' , 'agribot/path/stop_record')
+  let request
+  console.log('stop record')
+  client.sendRequest(request, (response)=>{
+    try{
+      console.log(response.result, 'stop record ')
+    }catch(e){
+      console.log(e)
+      console.log('cant record')
+    }
+
+
+  })
+
+}
 
 // node beat 
 setInterval(()=>{
   // check if get path list true 
+  if(objectData.stop_follow == true){
+    request = {'name' : objectData.path_name}
+    stopFollow()
+    objectData.stop_follow = false
+  }
+  if(objectData.start_record == true){
+    request = {'name' : "test"}
+    startRecord(request)
+    objectData.start_record = false
+  }
+  if(objectData.stop_record == true){
+    
+    stopRecord()
+    objectData.stop_record = false
+  }
   if(objectData.path_name){
     console.log('something added!!');
-   // send ros here and wait for response if response == 0 is ok 0 fail 
-   // 
     console.log(objectData.path_name)
     request = {'name' : objectData.path_name}
     startFollow(request)
     objectData.path_name = undefined;
   }
   if(objectData.get_path == true){
+    console.log(objectData.get_path)
     getPathList() 
+    objectData.get_path = false
     
    } 
+  //  startRecord({name: 'path_name_here'})
   },200) 
     rclnodejs.spin(node);
   })
