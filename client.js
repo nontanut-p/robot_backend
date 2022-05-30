@@ -61,6 +61,11 @@ var pcConfig = {
   'iceServers': [{
     'urls': 'stun:stun.l,.google.com:19302'
     },
+    {
+      urls: "turn:numb.viagenie.ca",
+      credential: "096872380",
+      username: "nontanut.c@gmail.com",
+    },
   ]
 };
 
@@ -179,6 +184,9 @@ class cClient{
         else if (data.event === 'get_rosout'){
           th.send_peer({event: 'get_rosout', message:ObjectExportData.rosout})
 
+        }
+        else if (data.event === 'get_motorstate'){
+          th.send_peer({event: 'get_motorstate', message:ObjectExportData.motorState})
         }
         else if(data.event == 'start_follow'){
           //  console.log('send pc status')

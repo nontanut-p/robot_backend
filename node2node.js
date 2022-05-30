@@ -13,7 +13,7 @@ var positionLL = []
 var path_list
 let listOfCam = ['','/agribot/camera/rear/image_raw' , '/agribot/camera/weed1/image_raw','/agribot/camera/rs_front/color/image_raw']
 let dumpObj = {}
-var objectData = {"cam" : 1 , "get_path" : false , "path_list" : undefined , 'path_name' : undefined , 'rosout': [], 'stop_follow' : false , 'start_record' : false , 'stop_record' : false}
+var objectData = {"cam" : 1 , "get_path" : false , "path_list" : undefined , 'path_name' : undefined , 'rosout': [],'motorState': [], 'stop_follow' : false , 'start_record' : false , 'stop_record' : false}
 const rosNodeCommand = (objData) =>{
   // dumpObj[Object.keys(objData)] = Object.values(objData)[0]
   // console.log(dumpObj) = Object.values(objData)[0] 
@@ -32,7 +32,7 @@ let lon_0 =  100.60713766385788
 let earth_radius = 6356752.3142    
 var cameraTopic ='/agribot/camera/rs_front/color/image_raw'
 var exportData = [base64Img, positionLL]
-var ObjectExportData = {"base64Img" :base64Img , "posinalLL" : positionLL , "PathList" : path_list , "state_follow" : false , 'rosout': [], 'start_record' : false, 'stop_record': false}
+var ObjectExportData = {"base64Img" :base64Img , "posinalLL" : positionLL , "PathList" : path_list , "state_follow" : false , 'rosout': [],  'motorState': {}, 'start_record' : false, 'stop_record': false}
 const changeCam = (cam)=>{
   // console.log('Camera is changing ....  from ', camera_selector , ' to ' , cam)
   camera_selector = cam
@@ -120,7 +120,7 @@ rclnodejs
     })
     let camNode = node.createSubscription(
       'sensor_msgs/msg/Image', // msg type
-      '/agribot/camera/rs_front/image_raw',// topic name agribot/camera/rear/image_raw 
+      '/agribot/camera/weed0/image_raw',// topic name agribot/camera/rear/image_raw 
       //'/image',
       async (msg) => { 
          try{
@@ -140,7 +140,7 @@ rclnodejs
 
     let camNode2 = node.createSubscription(
       'sensor_msgs/msg/Image', // msg type //
-      '/agribot/camera/rear/image_raw', // topic name agribot/camera/rear/image_raw 
+      '/agribot/camera/weed1/image_raw', // topic name agribot/camera/rear/image_raw 
       
       async (msg) => { 
         Client.send_data
@@ -155,7 +155,7 @@ rclnodejs
   );
   let camNode3 = node.createSubscription(
     'sensor_msgs/msg/Image', // msg type
-    '/agribot/camera/weed1/image_raw', // topic name agribot/camera/rear/image_raw 
+    '/agribot/camera/weed2/image_raw', // topic name agribot/camera/rear/image_raw 
     
     async (msg) => { 
       
@@ -184,14 +184,47 @@ rclnodejs
     }
   
 );
+let motorState = node.createSubscription(
+  'sensor_msgs/msg/JointState', // msg type
+  '/agribot/driver/motor_state', // topic name agribot/camera/rear/image_raw 
+  (state) => {
+    //motorState
+   let messages = {
+     "name" : state.name , 
+     "velocity" : state.velocity,
+     "position" : state.position,
+     "effort" : state.effort
+   }
+
+   ObjectExportData.motorState = messages
+  //  let message = " Name : " +state.name +" Msg " + state.msg + " Level " + state.level
+  //  console.log(message)
+
+   
+  }
+    
+);
 let rosOut = node.createSubscription(
   'rcl_interfaces/msg/Log', // msg type
   '/rosout', // topic name agribot/camera/rear/image_raw 
   (state) => {
-   let message = " Name : " +state.name +" Msg " + state.msg + " Level " + state.level
+
+    if(state.level == 20){
+      state.level = "green"
+    }else if(state.level == 30){
+      state.level = "orange"
+    }else{
+      state.level = "red"
+    }
+   let messages = {
+     "Name" : state.name , 
+     "Msg" : state.msg,
+     "Level" : state.level
+   }
+  //  let message = " Name : " +state.name +" Msg " + state.msg + " Level " + state.level
   //  console.log(message)
-   if(ObjectExportData.rosout !== message){
-    ObjectExportData.rosout.push(message) 
+   if(ObjectExportData.rosout !== messages){
+    ObjectExportData.rosout.push(messages) 
     
    }
    
