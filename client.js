@@ -13,6 +13,7 @@ var ObjectExportData = rosNodejs.ObjectExportData
 var rosNodeCommand = rosNodejs.rosNodeCommand
 var th 
 var peer
+var sendpeer
 var prev_message = []
 // CAM Default is 1   0 is close the camera 
 let pc = {
@@ -89,7 +90,7 @@ class cClient{
 
   send_peer(data){
     try{
-      if( data.event )
+      if(data.event)
         this.peer.send(JSON.stringify(data));
       else
         this.peer.send(data);
@@ -131,11 +132,12 @@ class cClient{
         resolve();
       });
       // got data from user
+      
       peer.on('data', (data) => {
-        //console.log('got data : '+JSON.stringify(data));
+        // console.log('got data : '+JSON.stringify(data));
         try{
           data = JSON.parse(data);
-         // console.log('data event =  ',data.event)
+          console.log('data event =  ',data.event)
         }
         catch(e){
           console.warn('cannot parse data');
@@ -149,18 +151,18 @@ class cClient{
         // console.log('data == : '+JSON.strirosNodeCommand(data)ngify(data));
         if( data.event=='ready' ){
           th.send_peer({event:'ready'});
+         
+
         }
         else if(data.event == 'get_location'){
           th.send_peer({event: 'get_location', data:gnssDataArr})
         }
         else if(data.event == 'stream'){
-         
           th.send_peer({event : 'stream', base64:ObjectExportData.base64Img } )
         }
         else if (data.event === 'camera_2'){
           data = {"cam" : 2}
           rosNodeCommand(data)
-         
         }
         else if (data.event === 'camera_1'){
           data = {"cam" : 1}
@@ -203,14 +205,11 @@ class cClient{
          else if(data.event == 'start_record'){
           data = {"start_record" : true }
           console.log("start record !!! ")
-          rosNodeCommand(data)
-          
+          rosNodeCommand(data)  
         }
-
         else if(data.event == 'stop_record'){
           data = {"stop_record" : true }
-          rosNodeCommand(data)
-          
+          rosNodeCommand(data) 
         }
         else if(data.event == 'get_pc_status'){
         //  console.log('send pc status')
@@ -308,7 +307,6 @@ function get_client_from_socket_id(socket_id){
 }
 
 
-
 module.exports = {
   init: init,
   remove_client: remove_client,
@@ -321,12 +319,5 @@ module.exports = {
     clients.push(client);
     return client;
   },
-  send_data : (event, data)=>{
-    try{
-      th.send_peer({event:'telling me', data:'something'})
-    }catch(e){
-      console.log('e')
-    }
-  }
 };
 

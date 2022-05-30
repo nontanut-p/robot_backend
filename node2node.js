@@ -60,14 +60,14 @@ function image_processing(msg){
   for (let i = 0; i < raw.length; i++) {
     array[i] = raw.charCodeAt(i)
   }
-  var frameData = Buffer.alloc(msg.width * msg.height * 3)
-  for (let i = 0; i < msg.width * msg.height; i++) {
-    frameData[3 * i + 2] = array[3 * i + 0] // b
-    frameData[3 * i + 1] = array[3 * i + 1] // g
-    frameData[3 * i + 0] = array[3 * i + 2] // r
+  // var frameData = Buffer.alloc(msg.width * msg.height * 3)
+  // for (let i = 0; i < msg.width * msg.height; i++) {
+  //   frameData[3 * i + 2] = array[3 * i + 2] // b
+  //   frameData[3 * i + 1] = array[3 * i + 1] // g
+  //   frameData[3 * i + 0] = array[3 * i + 0] // r
     
-  }
-  sharp(frameData, {
+  // }
+  sharp(array, {
     // because the input does not contain its dimensions or how many channels it has
     // we need to specify it in the constructor options  BGR to RGB
     raw: {
@@ -88,7 +88,7 @@ function image_processing(msg){
     })
 }
 
-
+// Client.send_data
 let request =  "{}"
 rclnodejs
   .init()
@@ -99,30 +99,34 @@ rclnodejs
       'agribot_interfaces/msg/RobotStatus', // msg type
       '/agribot/driver/robot_status' ,// topic name 
     (status) => {
-      console.log(status , "warning status")
+      // console.log(status , "warning status")
 
       //console.log(positionLL)
     })
     var gnssData = node.createSubscription(
       'agribot_interfaces/msg/Odom', // msg type
-      '/agribot/odom/odom_gnss' ,// topic name 
+      '/agribot/odom/odom' ,// topic name 
     (state) => {
-      console.log(state)
-      topicData = state
-      lat = topicData.lat
-      lon = topicData.lon
-      positionLL = [lat, lon]
+     
+      // console.log(state.lat)
+      let topic = {'lat' : 0 , 'lon' : 0} 
+      topic.lat = state.lat
+      topic.lon = state.lon  
+      // state.lat = topicData.lat
+      // state.lon = topicData.lon
+      positionLL = [topic.lat, topic.lon]
       ObjectExportData.posinalLL = positionLL
-      //console.log(positionLL)
+      // console.log(topic)
     })
     let camNode = node.createSubscription(
       'sensor_msgs/msg/Image', // msg type
-      '/agribot/camera/rear/image_raw',// topic name agribot/camera/rear/image_raw 
+      '/agribot/camera/rs_front/image_raw',// topic name agribot/camera/rear/image_raw 
       //'/image',
       async (msg) => { 
          try{
           // console.log(Client.peer.send_peer('test'))
-          // Client.send_data()
+          
+        
          }catch(e){
            console.log('error')
          }
@@ -135,11 +139,11 @@ rclnodejs
       });
 
     let camNode2 = node.createSubscription(
-      'sensor_msgs/msg/Image', // msg type
-      '/agribot/camera/rs_front/color/image_raw', // topic name agribot/camera/rear/image_raw 
+      'sensor_msgs/msg/Image', // msg type //
+      '/agribot/camera/rear/image_raw', // topic name agribot/camera/rear/image_raw 
       
       async (msg) => { 
-        
+        Client.send_data
         if(objectData.cam == 2){
           // console.log('test 2', objectData.cam)
           image_processing(msg)
@@ -167,7 +171,7 @@ rclnodejs
   );
   let camNode4 = node.createSubscription(
     'sensor_msgs/msg/Image', // msg type
-    '/image', // topic name agribot/camera/rear/image_raw 
+    '/agribot/camera/weed3/image_raw', // topic name agribot/camera/rear/image_raw 
     async (msg) => { 
     
       if(objectData.cam == 0){
